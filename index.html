@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSE (AI) Student Hub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%231B2A44%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%23FAF8F3%22 font-family=%22serif%22>H</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --paper:#FAF8F3;
+    --ink:#1B2A44;
+    --ink-soft:#3A4C6B;
+    --rule:#D9D3C4;
+    --rule-strong:#B9B09A;
+    --amber:#E8A324;
+    --amber-ink:#7A5205;
+    --green:#3F7D58;
+    --green-bg:#E7F1EA;
+    --brick:#A8442B;
+    --brick-bg:#F6E7E2;
+    --card:#FFFFFF;
+    --shadow: 0 1px 0 var(--rule);
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "IBM Plex Sans", -apple-system, Segoe UI, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--serif); font-weight:600; margin:0 0 .3em; color:var(--ink);}
+  a{color:var(--ink); text-decoration-color:var(--rule-strong);}
+  button{font-family:var(--sans); cursor:pointer;}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+
+  /* ============ LAYOUT SHELL ============ */
+  .masthead{
+    border-bottom:2px solid var(--ink);
+    padding:28px 24px 0;
+    max-width:1080px; margin:0 auto;
+  }
+  .masthead-top{
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand h1{font-size:clamp(24px,4vw,32px); letter-spacing:-.01em;}
+  .brand .dept{font-family:var(--sans); font-size:13px; color:var(--ink-soft); border-left:1px solid var(--rule-strong); padding-left:12px;}
+  .admin-link{font-size:13px; color:var(--ink-soft); text-decoration:none; border-bottom:1px dotted var(--rule-strong); padding-bottom:1px;}
+  .admin-link:hover{color:var(--ink);}
+  .tagline{color:var(--ink-soft); font-size:15px; margin:6px 0 20px; max-width:56ch;}
+
+  /* Folder-tab navigation */
+  .tabs{display:flex; gap:4px; margin-top:8px;}
+  .tab{
+    font-family:var(--sans); font-size:14.5px; font-weight:500;
+    background:var(--rule); color:var(--ink-soft);
+    border:1px solid var(--ink); border-bottom:none;
+    padding:10px 18px 9px;
+    border-radius:8px 8px 0 0;
+    position:relative; top:1px;
+    transition:background .15s, color .15s;
+  }
+  .tab[aria-selected="true"]{
+    background:var(--paper); color:var(--ink); font-weight:600;
+  }
+  .tab:hover:not([aria-selected="true"]){background:#EFE9D8;}
+
+  main{max-width:1080px; margin:0 auto; padding:28px 24px 80px; border-top:1px solid var(--ink);}
+  .view{display:none;}
+  .view.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  /* ============ SHARED UI ============ */
+  .toolbar{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    padding:16px 0; border-bottom:1px solid var(--rule); margin-bottom:20px;
+  }
+  .toolbar input[type=text], .toolbar select, .field input, .field select, .field textarea{
+    font-family:var(--sans); font-size:14px; color:var(--ink);
+    background:var(--card); border:1px solid var(--rule-strong); border-radius:6px;
+    padding:9px 11px;
+  }
+  .toolbar input[type=text]{flex:1; min-width:180px;}
+  .btn{
+    font-size:14px; font-weight:600; border-radius:6px; border:1px solid var(--ink);
+    background:var(--ink); color:var(--paper); padding:10px 16px;
+    transition:transform .1s, background .15s;
+  }
+  .btn:hover{background:#0F1B30;}
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{background:var(--paper); color:var(--ink);}
+  .btn.secondary:hover{background:#EFE9D8;}
+  .btn.danger{background:var(--brick); border-color:var(--brick);}
+  .btn.danger:hover{background:#8C3822;}
+  .btn.small{padding:6px 11px; font-size:12.5px;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  .spacer{flex:1;}
+  .muted{color:var(--ink-soft); font-size:13.5px;}
+  .empty{
+    padding:40px 20px; text-align:center; color:var(--ink-soft);
+    border:1px dashed var(--rule-strong); border-radius:10px;
+  }
+
+  /* status chip */
+  .chip{display:inline-block; font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px;}
+  .chip.pending{background:#FBEED1; color:var(--amber-ink);}
+  .chip.published{background:var(--green-bg); color:var(--green);}
+  .chip.rejected{background:var(--brick-bg); color:var(--brick);}
+
+  /* Index-card grid (Study Resources) */
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:18px;}
+  .rcard{
+    background:var(--card); border:1px solid var(--rule-strong); border-radius:3px;
+    padding:18px 16px 16px; position:relative; box-shadow:var(--shadow);
+  }
+  .rcard::before{
+    content:""; position:absolute; top:-6px; left:20px;
+    width:10px; height:10px; border-radius:50%;
+    background:var(--paper); border:1px solid var(--rule-strong);
+  }
+  .rcard::after{
+    content:""; position:absolute; top:-6px; right:20px;
+    width:10px; height:10px; border-radius:50%;
+    background:var(--paper); border:1px solid var(--rule-strong);
+  }
+  .rcard .meta-row{display:flex; gap:8px; font-size:12px; color:var(--ink-soft); margin-bottom:8px; flex-wrap:wrap;}
+  .rcard .tag{border:1px solid var(--rule-strong); border-radius:20px; padding:1px 9px;}
+  .rcard h3{font-size:17px; margin-bottom:4px;}
+  .rcard p{font-size:13.5px; color:var(--ink-soft); margin:0 0 12px;}
+  .rcard .rcard-foot{display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--rule); padding-top:10px;}
+
+  /* Placement list rows */
+  .elist{display:flex; flex-direction:column; gap:14px;}
+  .ecard{background:var(--card); border:1px solid var(--rule-strong); border-radius:8px; overflow:hidden;}
+  .ecard summary{
+    list-style:none; cursor:pointer; padding:16px 18px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  .ecard summary::-webkit-details-marker{display:none;}
+  .ecard summary .co{font-family:var(--serif); font-weight:600; font-size:17px;}
+  .ecard summary .role{color:var(--ink-soft); font-size:14px;}
+  .diff{font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px;}
+  .diff.Easy{background:var(--green-bg); color:var(--green);}
+  .diff.Medium{background:#FBEED1; color:var(--amber-ink);}
+  .diff.Hard{background:var(--brick-bg); color:var(--brick);}
+  .ecard .body{padding:0 18px 18px; border-top:1px solid var(--rule);}
+  .round-block{padding-top:14px;}
+  .round-block h4{font-size:14px; margin:0 0 4px; font-family:var(--sans); font-weight:600;}
+  .round-block p{margin:0 0 10px; font-size:14px; color:var(--ink-soft); white-space:pre-wrap;}
+  .tip-box{background:#FBF7EC; border:1px solid var(--rule); border-radius:6px; padding:10px 12px; font-size:14px; margin-top:8px;}
+  .contributor{font-size:12.5px; color:var(--ink-soft); margin-top:10px;}
+
+  /* Forms / Modal */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(27,42,68,.5); display:none;
+    align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto; z-index:50;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{
+    background:var(--paper); border:1px solid var(--ink); border-radius:10px;
+    max-width:600px; width:100%; padding:26px 26px 24px;
+  }
+  .modal h2{font-size:20px;}
+  .modal .close{position:absolute;}
+  .modal-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;}
+  .modal-head button{background:none; border:none; font-size:22px; color:var(--ink-soft); line-height:1;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:var(--ink);}
+  .field .hint{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .field input, .field select, .field textarea{width:100%;}
+  .field textarea{resize:vertical; min-height:70px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .round-editor{border:1px solid var(--rule); border-radius:8px; padding:12px; margin-bottom:10px; background:#FBF9F4;}
+  .round-editor-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .round-editor-head span{font-size:13px; font-weight:600;}
+  .link-btn{background:none; border:none; color:var(--ink-soft); font-size:13px; text-decoration:underline; padding:4px 0;}
+  .link-btn:hover{color:var(--ink);}
+  .radio-row{display:flex; gap:16px; align-items:center; font-size:14px;}
+  .radio-row label{display:flex; align-items:center; gap:6px; font-weight:400;}
+
+  /* Toast */
+  #toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); padding:12px 20px; border-radius:8px;
+    font-size:14px; opacity:0; pointer-events:none; transition:.25s; z-index:100; max-width:90vw;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #toast.err{background:var(--brick);}
+
+  /* Admin */
+  .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:24px;}
+  .stat{border:1px solid var(--rule-strong); border-radius:8px; padding:14px 16px; background:var(--card);}
+  .stat .num{font-family:var(--serif); font-size:26px; font-weight:700;}
+  .stat .lbl{font-size:12.5px; color:var(--ink-soft);}
+  .ledger{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .ledger th{text-align:left; font-size:12px; color:var(--ink-soft); font-weight:600; padding:8px 10px; border-bottom:2px solid var(--ink);}
+  .ledger td{padding:10px; border-bottom:1px solid var(--rule); vertical-align:top;}
+  .ledger tr:hover td{background:#FBF9F4;}
+  .subtabs{display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--rule);}
+  .subtab{background:none; border:none; padding:9px 4px; margin-right:14px; font-size:14px; color:var(--ink-soft); border-bottom:2px solid transparent;}
+  .subtab[aria-selected="true"]{color:var(--ink); font-weight:600; border-bottom-color:var(--amber);}
+  .login-box{max-width:340px; margin:60px auto; padding:28px; background:var(--card); border:1px solid var(--rule-strong); border-radius:10px;}
+  .config-warning{background:var(--brick-bg); color:var(--brick); border:1px solid var(--brick); border-radius:8px; padding:14px 16px; font-size:13.5px; margin-bottom:20px;}
+
+  footer{max-width:1080px; margin:0 auto; padding:24px; color:var(--ink-soft); font-size:12.5px; border-top:1px solid var(--rule);}
+
+  @media (max-width:620px){
+    .row-2{grid-template-columns:1fr;}
+    .masthead{padding:20px 16px 0;}
+    main{padding:22px 16px 60px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-top">
+    <div class="brand">
+      <h1>CSE (AI) Student Hub</h1>
+      <span class="dept">Dept. of Computer Science &amp; Engineering (AI)</span>
+    </div>
+    <a href="#admin" class="admin-link" id="admin-nav-link">Admin login</a>
+  </div>
+  <p class="tagline">Notes, previous year papers, and interview experiences — shared by seniors, checked by admins, ready for you to use.</p>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="resources" aria-selected="true">Study Resources</button>
+    <button class="tab" role="tab" data-view="experiences" aria-selected="false">Placement Bank</button>
+    <button class="tab" role="tab" data-view="mydata" aria-selected="false">My submissions</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ STUDY RESOURCES ============ -->
+  <section class="view active" id="view-resources">
+    <div class="toolbar">
+      <input type="text" id="res-search" placeholder="Search by title or subject…">
+      <select id="res-filter-subject"><option value="">All subjects</option></select>
+      <select id="res-filter-sem"><option value="">All semesters</option></select>
+      <select id="res-filter-type">
+        <option value="">All types</option>
+        <option value="Notes">Notes</option>
+        <option value="PYQ">PYQ</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn" id="open-res-form">Upload a resource</button>
+    </div>
+    <div id="res-status" class="muted" style="margin-bottom:12px;"></div>
+    <div class="card-grid" id="res-grid"></div>
+  </section>
+
+  <!-- ============ PLACEMENT BANK ============ -->
+  <section class="view" id="view-experiences">
+    <div class="toolbar">
+      <input type="text" id="exp-search" placeholder="Search by company or role…">
+      <select id="exp-filter-diff">
+        <option value="">All difficulty</option>
+        <option value="Easy">Easy</option>
+        <option value="Medium">Medium</option>
+        <option value="Hard">Hard</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn" id="open-exp-form">Share your experience</button>
+    </div>
+    <div id="exp-status" class="muted" style="margin-bottom:12px;"></div>
+    <div class="elist" id="exp-list"></div>
+  </section>
+
+  <!-- ============ MY SUBMISSIONS ============ -->
+  <section class="view" id="view-mydata">
+    <h2 style="font-size:20px;">Find what you've submitted</h2>
+    <p class="muted" style="max-width:60ch; margin-bottom:18px;">
+      Enter the email you used when submitting. You'll see the status of everything you've sent in,
+      and you can request deletion at any time — no login required.
+    </p>
+    <div class="toolbar" style="border-bottom:none; padding-top:0;">
+      <input type="text" id="mydata-email" placeholder="you@example.com" style="max-width:320px;">
+      <button class="btn" id="mydata-lookup">Look up</button>
+    </div>
+    <div id="mydata-results"></div>
+  </section>
+
+  <!-- ============ ADMIN ============ -->
+  <section class="view" id="view-admin">
+    <div id="admin-login-wrap">
+      <div class="login-box">
+        <h2 style="font-size:19px;">Admin login</h2>
+        <div class="field"><label>Email</label><input type="text" id="admin-email"></div>
+        <div class="field"><label>Password</label><input type="password" id="admin-password"></div>
+        <button class="btn" id="admin-login-btn" style="width:100%;">Log in</button>
+        <p class="muted" id="admin-login-err" style="margin-top:10px;"></p>
+      </div>
+    </div>
+
+    <div id="admin-dash" style="display:none;">
+      <div class="toolbar" style="border-bottom:none;">
+        <h2 style="font-size:20px; margin:0;">Admin dashboard</h2>
+        <div class="spacer"></div>
+        <button class="btn secondary small" id="admin-logout-btn">Log out</button>
+      </div>
+
+      <div class="stat-row" id="admin-stats"></div>
+
+      <div class="subtabs" role="tablist">
+        <button class="subtab" data-admin-tab="pending-res" aria-selected="true">Pending resources</button>
+        <button class="subtab" data-admin-tab="pending-exp" aria-selected="false">Pending experiences</button>
+        <button class="subtab" data-admin-tab="all" aria-selected="false">All content</button>
+      </div>
+
+      <div id="admin-pending-res"></div>
+      <div id="admin-pending-exp" style="display:none;"></div>
+      <div id="admin-all" style="display:none;"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Built for students, moderated by admins. Content is reviewed before it goes public.
+  &nbsp;·&nbsp; <a href="#mydata" style="color:inherit;">Request your data be removed</a>
+</footer>
+
+<!-- ============ SUBMIT RESOURCE MODAL ============ -->
+<div class="modal-backdrop" id="res-modal-backdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Upload a resource</h2>
+      <button aria-label="Close" data-close-modal="res-modal-backdrop">&times;</button>
+    </div>
+    <form id="res-form">
+      <div class="row-2">
+        <div class="field">
+          <label>Subject</label>
+          <input type="text" id="f-res-subject" list="subject-list" required placeholder="e.g. Data Structures">
+          <datalist id="subject-list"></datalist>
+        </div>
+        <div class="field">
+          <label>Semester</label>
+          <select id="f-res-semester" required>
+            <option value="">Select</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f-res-type" value="Notes" checked> Notes</label>
+          <label><input type="radio" name="f-res-type" value="PYQ"> Previous year question paper</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="f-res-title" required placeholder="e.g. Unit 3 — Trees &amp; Graphs">
+      </div>
+      <div class="field">
+        <label>Description <span class="muted">(optional)</span></label>
+        <textarea id="f-res-desc" placeholder="Anything that helps others know what this covers"></textarea>
+      </div>
+      <div class="field">
+        <label>File (PDF or image)</label>
+        <input type="file" id="f-res-file" accept=".pdf,image/*" required>
+      </div>
+      <div class="field">
+        <label>Your email</label>
+        <input type="email" id="f-res-email" required placeholder="you@example.com">
+        <p class="hint">Kept private — only used so you can find or delete your own submission later.</p>
+      </div>
+      <button class="btn" type="submit" id="res-submit-btn" style="width:100%;">Submit for review</button>
+      <p class="muted" id="res-form-msg" style="margin-top:10px;"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ============ SUBMIT EXPERIENCE MODAL ============ -->
+<div class="modal-backdrop" id="exp-modal-backdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Share your interview experience</h2>
+      <button aria-label="Close" data-close-modal="exp-modal-backdrop">&times;</button>
+    </div>
+    <form id="exp-form">
+      <div class="row-2">
+        <div class="field">
+          <label>Company</label>
+          <input type="text" id="f-exp-company" required placeholder="e.g. Acme Corp">
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <input type="text" id="f-exp-role" required placeholder="e.g. SDE Intern">
+        </div>
+      </div>
+      <div class="field">
+        <label>Overall difficulty</label>
+        <select id="f-exp-difficulty" required>
+          <option value="Easy">Easy</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Rounds</label>
+        <div id="round-editors"></div>
+        <button type="button" class="link-btn" id="add-round-btn">+ Add another round</button>
+      </div>
+      <div class="field">
+        <label>Tips for juniors <span class="muted">(optional)</span></label>
+        <textarea id="f-exp-tips" placeholder="What would you tell someone preparing for this?"></textarea>
+      </div>
+      <div class="field">
+        <label>Credit</label>
+        <div class="radio-row" style="margin-bottom:10px;">
+          <label><input type="radio" name="f-exp-anon" value="named" checked> Show my name</label>
+          <label><input type="radio" name="f-exp-anon" value="anon"> Post anonymously</label>
+        </div>
+        <input type="text" id="f-exp-name" placeholder="Your name">
+      </div>
+      <div class="field">
+        <label>Your email</label>
+        <input type="email" id="f-exp-email" required placeholder="you@example.com">
+        <p class="hint">Kept private, never shown publicly — only for your own submission lookup/deletion.</p>
+      </div>
+      <button class="btn" type="submit" id="exp-submit-btn" style="width:100%;">Submit for review</button>
+      <p class="muted" id="exp-form-msg" style="margin-top:10px;"></p>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================================================================
+   CONFIG — fill these in with your own Supabase project's values.
+   Project Settings → API → Project URL / anon public key.
+   ================================================================ */
+const SUPABASE_URL = "sb_publishable_K0BBZS4qDdXEKurV6KyXVw_vPtmkjIQ";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3a3FtdmRxaGJmeXpobG9ydmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MjUxOTEsImV4cCI6MjEwNTUwMTE5MX0.QtOAKtBCPvidGup12aSVpw05Xh65LKT_zj5BbpUVDkU";
+
+const isConfigured = !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
+const sb = isConfigured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const BUCKET = "resources";
+const SUBJECT_SUGGESTIONS = ["Data Structures","Algorithms","Machine Learning","Deep Learning","DBMS","Operating Systems","Computer Networks","Maths III","Python Programming","Java Programming","NLP","Computer Vision"];
+
+/* ---------- small helpers ---------- */
+function $(sel, root=document){ return root.querySelector(sel); }
+function $all(sel, root=document){ return [...root.querySelectorAll(sel)]; }
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatDate(d){ return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+function toast(msg, isErr=false){
+  const t = $('#toast'); t.textContent = msg; t.className = isErr ? 'show err' : 'show';
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+function requireConfig(){
+  if(!isConfigured){ toast("Supabase isn't configured yet — see SETUP.md", true); return false; }
+  return true;
+}
+
+/* ---------- config warning banner ---------- */
+if(!isConfigured){
+  const warn = document.createElement('div');
+  warn.className = 'config-warning';
+  warn.style.margin = '20px auto 0';
+  warn.style.maxWidth = '1032px';
+  warn.textContent = "⚠ This site isn't connected to a database yet. Open index.html and set SUPABASE_URL / SUPABASE_ANON_KEY at the top of the <script> — see SETUP.md for step-by-step instructions.";
+  document.querySelector('main').prepend(warn);
+}
+
+/* ---------- datalist for subjects ---------- */
+$('#subject-list').innerHTML = SUBJECT_SUGGESTIONS.map(s=>`<option value="${escapeHtml(s)}">`).join('');
+$('#res-filter-subject').innerHTML += SUBJECT_SUGGESTIONS.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+$('#res-filter-sem').innerHTML += [1,2,3,4,5,6,7,8].map(n=>`<option value="${n}">Semester ${n}</option>`).join('');
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+function showView(name){
+  $all('.view').forEach(v => v.classList.toggle('active', v.id === 'view-'+name));
+  $all('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === name ? 'true' : 'false'));
+  if(name==='resources') loadResources();
+  if(name==='experiences') loadExperiences();
+  if(name==='admin') loadAdmin();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+$all('.tab').forEach(t => t.addEventListener('click', ()=> showView(t.dataset.view)));
+$('#admin-nav-link').addEventListener('click', e=>{ e.preventDefault(); showView('admin'); });
+
+/* ================================================================
+   MODALS
+   ================================================================ */
+function openModal(id){ $('#'+id).classList.add('open'); }
+function closeModal(id){ $('#'+id).classList.remove('open'); }
+$all('[data-close-modal]').forEach(b => b.addEventListener('click', ()=> closeModal(b.dataset.closeModal)));
+$all('.modal-backdrop').forEach(bd => bd.addEventListener('click', e=>{ if(e.target===bd) bd.classList.remove('open'); }));
+$('#open-res-form').addEventListener('click', ()=> openModal('res-modal-backdrop'));
+$('#open-exp-form').addEventListener('click', ()=> openModal('exp-modal-backdrop'));
+
+/* ================================================================
+   STUDY RESOURCES
+   ================================================================ */
+async function loadResources(){
+  const grid = $('#res-grid'), statusEl = $('#res-status');
+  if(!requireConfig()){ grid.innerHTML=''; return; }
+  grid.innerHTML = '<p class="muted">Loading…</p>';
+  let q = sb.from('resources').select('*').eq('status','published').order('created_at',{ascending:false});
+  const search = $('#res-search').value.trim();
+  const subject = $('#res-filter-subject').value;
+  const sem = $('#res-filter-sem').value;
+  const type = $('#res-filter-type').value;
+  if(subject) q = q.eq('subject', subject);
+  if(sem) q = q.eq('semester', sem);
+  if(type) q = q.eq('type', type);
+  if(search) q = q.or(`title.ilike.%${search}%,subject.ilike.%${search}%`);
+  const {data, error} = await q;
+  if(error){ grid.innerHTML=''; statusEl.textContent = 'Could not load resources: ' + error.message; return; }
+  statusEl.textContent = `${data.length} resource${data.length===1?'':'s'} found`;
+  if(data.length===0){ grid.innerHTML = '<div class="empty">No resources match yet. Try clearing filters, or be the first to upload one.</div>'; return; }
+  grid.innerHTML = data.map(r => {
+    const url = sb.storage.from(BUCKET).getPublicUrl(r.file_path).data.publicUrl;
+    return `<article class="rcard">
+      <div class="meta-row"><span class="tag">${escapeHtml(r.type)}</span><span class="tag">Sem ${escapeHtml(r.semester)}</span><span class="tag">${escapeHtml(r.subject)}</span></div>
+      <h3>${escapeHtml(r.title)}</h3>
+      ${r.description ? `<p>${escapeHtml(r.description)}</p>` : ''}
+      <div class="rcard-foot">
+        <span class="muted">${formatDate(r.created_at)}</span>
+        <a class="btn small secondary" href="${url}" target="_blank" rel="noopener">Open file</a>
+      </div>
+    </article>`;
+  }).join('');
+}
+['res-search','res-filter-subject','res-filter-sem','res-filter-type'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener(el.tagName==='SELECT' ? 'change' : 'input', debounce(loadResources, 300));
+});
+function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+/* --- submit resource --- */
+let roundCount = 0;
+function addRoundEditor(prefill){
+  roundCount++;
+  const n = roundCount;
+  const wrap = document.createElement('div');
+  wrap.className = 'round-editor';
+  wrap.dataset.round = n;
+  wrap.innerHTML = `
+    <div class="round-editor-head">
+      <span>Round ${n}</span>
+      <button type="button" class="link-btn" data-remove-round>Remove</button>
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <input type="text" class="round-title" placeholder="e.g. Round 1 — Online Assessment" value="${prefill?escapeHtml(prefill.title):''}">
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <textarea class="round-questions" placeholder="Questions asked, format, what to expect…">${prefill?escapeHtml(prefill.questions):''}</textarea>
+    </div>`;
+  wrap.querySelector('[data-remove-round]').addEventListener('click', ()=> wrap.remove());
+  $('#round-editors').appendChild(wrap);
+}
+$('#add-round-btn').addEventListener('click', ()=> addRoundEditor());
+
+$('#res-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if(!requireConfig()) return;
+  const btn = $('#res-submit-btn'), msg = $('#res-form-msg');
+  const file = $('#f-res-file').files[0];
+  if(!file){ msg.textContent = 'Please choose a file.'; return; }
+  btn.disabled = true; msg.textContent = 'Uploading…';
+  try{
+    const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9_.-]/g,'_')}`;
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file);
+    if(upErr) throw upErr;
+    const { error: insErr } = await sb.from('resources').insert({
+      subject: $('#f-res-subject').value.trim(),
+      semester: $('#f-res-semester').value,
+      type: $all('input[name="f-res-type"]:checked')[0].value,
+      title: $('#f-res-title').value.trim(),
+      description: $('#f-res-desc').value.trim() || null,
+      file_path: path,
+      file_name: file.name,
+      submitter_email: $('#f-res-email').value.trim(),
+      status: 'pending'
+    });
+    if(insErr) throw insErr;
+    msg.textContent = '';
+    toast('Submitted — it will appear once an admin approves it.');
+    e.target.reset();
+    closeModal('res-modal-backdrop');
+  }catch(err){
+    msg.textContent = 'Something went wrong: ' + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ================================================================
+   PLACEMENT BANK
+   ================================================================ */
+async function loadExperiences(){
+  const list = $('#exp-list'), statusEl = $('#exp-status');
+  if(!requireConfig()){ list.innerHTML=''; return; }
+  list.innerHTML = '<p class="muted">Loading…</p>';
+  let q = sb.from('experiences').select('*').eq('status','published').order('created_at',{ascending:false});
+  const search = $('#exp-search').value.trim();
+  const diff = $('#exp-filter-diff').value;
+  if(diff) q = q.eq('difficulty', diff);
+  if(search) q = q.or(`company.ilike.%${search}%,role.ilike.%${search}%`);
+  const {data, error} = await q;
+  if(error){ list.innerHTML=''; statusEl.textContent = 'Could not load experiences: ' + error.message; return; }
+  statusEl.textContent = `${data.length} experience${data.length===1?'':'s'} found`;
+  if(data.length===0){ list.innerHTML = '<div class="empty">No experiences match yet. Try clearing filters, or share yours.</div>'; return; }
+  list.innerHTML = data.map(x => {
+    const rounds = Array.isArray(x.rounds) ? x.rounds : [];
+    return `<details class="ecard">
+      <summary>
+        <span class="co">${escapeHtml(x.company)}</span>
+        <span class="role">${escapeHtml(x.role)}</span>
+        <span class="diff ${escapeHtml(x.difficulty)}">${escapeHtml(x.difficulty)}</span>
+        <span class="spacer"></span>
+        <span class="muted">${formatDate(x.created_at)}</span>
+      </summary>
+      <div class="body">
+        ${rounds.map(r => `<div class="round-block"><h4>${escapeHtml(r.title||'Round')}</h4><p>${escapeHtml(r.questions||'')}</p></div>`).join('')}
+        ${x.tips ? `<div class="tip-box"><strong>Tips:</strong> ${escapeHtml(x.tips)}</div>` : ''}
+        <p class="contributor">${x.is_anonymous ? 'Shared anonymously' : 'Shared by ' + escapeHtml(x.contributor_name || 'a senior')}</p>
+      </div>
+    </details>`;
+  }).join('');
+}
+['exp-search','exp-filter-diff'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener(el.tagName==='SELECT' ? 'change' : 'input', debounce(loadExperiences, 300));
+});
+
+/* --- submit experience --- */
+addRoundEditor({title:'Round 1', questions:''});
+
+$('#exp-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if(!requireConfig()) return;
+  const btn = $('#exp-submit-btn'), msg = $('#exp-form-msg');
+  const rounds = $all('.round-editor').map(w => ({
+    title: w.querySelector('.round-title').value.trim(),
+    questions: w.querySelector('.round-questions').value.trim()
+  })).filter(r => r.title || r.questions);
+  if(rounds.length===0){ msg.textContent = 'Add at least one round.'; return; }
+  const isAnon = $all('input[name="f-exp-anon"]:checked')[0].value === 'anon';
+  btn.disabled = true; msg.textContent = 'Submitting…';
+  try{
+    const { error } = await sb.from('experiences').insert({
+      company: $('#f-exp-company').value.trim(),
+      role: $('#f-exp-role').value.trim(),
+      difficulty: $('#f-exp-difficulty').value,
+      rounds,
+      tips: $('#f-exp-tips').value.trim() || null,
+      contributor_name: isAnon ? null : ($('#f-exp-name').value.trim() || null),
+      is_anonymous: isAnon,
+      submitter_email: $('#f-exp-email').value.trim(),
+      status: 'pending'
+    });
+    if(error) throw error;
+    msg.textContent = '';
+    toast('Submitted — it will appear once an admin approves it.');
+    e.target.reset();
+    $('#round-editors').innerHTML = ''; roundCount = 0;
+    addRoundEditor({title:'Round 1', questions:''});
+    closeModal('exp-modal-backdrop');
+  }catch(err){
+    msg.textContent = 'Something went wrong: ' + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ================================================================
+   MY SUBMISSIONS (self-service privacy)
+   ================================================================ */
+$('#mydata-lookup').addEventListener('click', lookupMyData);
+$('#mydata-email').addEventListener('keydown', e => { if(e.key==='Enter') lookupMyData(); });
+
+async function lookupMyData(){
+  if(!requireConfig()) return;
+  const email = $('#mydata-email').value.trim();
+  const results = $('#mydata-results');
+  if(!email){ toast('Enter the email you submitted with.', true); return; }
+  results.innerHTML = '<p class="muted">Looking…</p>';
+  const { data, error } = await sb.rpc('my_submissions', { p_email: email });
+  if(error){ results.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`; return; }
+  if(!data || data.length===0){ results.innerHTML = '<div class="empty">Nothing found for that email.</div>'; return; }
+  results.innerHTML = `<table class="ledger"><thead><tr>
+      <th>Type</th><th>Title</th><th>Submitted</th><th>Status</th><th></th>
+    </tr></thead><tbody>
+    ${data.map(row => `<tr>
+      <td>${row.source==='resource' ? 'Resource' : 'Experience'}</td>
+      <td>${escapeHtml(row.title)}</td>
+      <td>${formatDate(row.created_at)}</td>
+      <td><span class="chip ${row.status}">${row.status}</span>${row.reject_reason ? `<div class="muted" style="margin-top:4px;">${escapeHtml(row.reject_reason)}</div>` : ''}</td>
+      <td><button class="btn small danger" data-del-source="${row.source}" data-del-id="${row.id}">Delete</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+  $all('[data-del-source]', results).forEach(b => b.addEventListener('click', async ()=>{
+    if(!confirm('Delete this submission permanently?')) return;
+    const { data: ok, error: delErr } = await sb.rpc('delete_my_submission', {
+      p_source: b.dataset.delSource, p_id: b.dataset.delId, p_email: email
+    });
+    if(delErr || !ok){ toast('Could not delete: ' + (delErr ? delErr.message : 'not found'), true); return; }
+    toast('Deleted.');
+    lookupMyData();
+  }));
+}
+
+/* ================================================================
+   ADMIN
+   ================================================================ */
+let adminTab = 'pending-res';
+$all('.subtab').forEach(t => t.addEventListener('click', ()=>{
+  adminTab = t.dataset.adminTab;
+  $all('.subtab').forEach(x => x.setAttribute('aria-selected', x===t?'true':'false'));
+  $('#admin-pending-res').style.display = adminTab==='pending-res' ? '' : 'none';
+  $('#admin-pending-exp').style.display = adminTab==='pending-exp' ? '' : 'none';
+  $('#admin-all').style.display = adminTab==='all' ? '' : 'none';
+  renderAdminTab();
+}));
+
+async function loadAdmin(){
+  if(!requireConfig()) return;
+  const { data: { session } } = await sb.auth.getSession();
+  $('#admin-login-wrap').style.display = session ? 'none' : '';
+  $('#admin-dash').style.display = session ? '' : 'none';
+  if(session){ await refreshAdminStats(); await renderAdminTab(); }
+}
+
+$('#admin-login-btn').addEventListener('click', async ()=>{
+  if(!requireConfig()) return;
+  const email = $('#admin-email').value.trim();
+  const password = $('#admin-password').value;
+  const err = $('#admin-login-err');
+  err.textContent = 'Logging in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ err.textContent = error.message; return; }
+  err.textContent = '';
+  loadAdmin();
+});
+$('#admin-logout-btn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  loadAdmin();
+});
+
+async function refreshAdminStats(){
+  const counts = {};
+  for(const table of ['resources','experiences']){
+    for(const status of ['pending','published','rejected']){
+      const { count } = await sb.from(table).select('*', {count:'exact', head:true}).eq('status', status);
+      counts[table+'_'+status] = count || 0;
+    }
+  }
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  $('#admin-stats').innerHTML = `
+    <div class="stat"><div class="num">${counts.resources_pending + counts.experiences_pending}</div><div class="lbl">Pending review</div></div>
+    <div class="stat"><div class="num">${counts.resources_published + counts.experiences_published}</div><div class="lbl">Published</div></div>
+    <div class="stat"><div class="num">${counts.resources_rejected + counts.experiences_rejected}</div><div class="lbl">Rejected</div></div>
+    <div class="stat"><div class="num">${total}</div><div class="lbl">All-time submissions</div></div>
+  `;
+}
+
+async function renderAdminTab(){
+  if(adminTab==='pending-res') return renderPendingResources();
+  if(adminTab==='pending-exp') return renderPendingExperiences();
+  if(adminTab==='all') return renderAllContent();
+}
+
+async function renderPendingResources(){
+  const el = $('#admin-pending-res');
+  el.innerHTML = '<p class="muted">Loading…</p>';
+  const { data, error } = await sb.from('resources').select('*').eq('status','pending').order('created_at',{ascending:true});
+  if(error){ el.innerHTML = escapeHtml(error.message); return; }
+  if(data.length===0){ el.innerHTML = '<div class="empty">No pending resources — all caught up.</div>'; return; }
+  el.innerHTML = `<table class="ledger"><thead><tr><th>Submitted</th><th>Subject / Sem / Type</th><th>Title</th><th>File</th><th>Submitter</th><th></th></tr></thead><tbody>
+    ${data.map(r => {
+      const url = sb.storage.from(BUCKET).getPublicUrl(r.file_path).data.publicUrl;
+      return `<tr>
+        <td>${formatDate(r.created_at)}</td>
+        <td>${escapeHtml(r.subject)} · Sem ${escapeHtml(r.semester)} · ${escapeHtml(r.type)}</td>
+        <td>${escapeHtml(r.title)}${r.description ? `<div class="muted">${escapeHtml(r.description)}</div>` : ''}</td>
+        <td><a href="${url}" target="_blank" rel="noopener">View file</a></td>
+        <td class="muted">${escapeHtml(r.submitter_email)}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn small" data-approve-res="${r.id}">Approve</button>
+          <button class="btn small danger" data-reject-res="${r.id}">Reject</button>
+        </td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+  $all('[data-approve-res]', el).forEach(b => b.addEventListener('click', ()=> moderate('resources', b.dataset.approveRes, 'published')));
+  $all('[data-reject-res]', el).forEach(b => b.addEventListener('click', ()=>{
+    const reason = prompt('Reason for rejecting (shown to submitter):', 'Please re-scan / low quality — resubmit if possible.');
+    if(reason===null) return;
+    moderate('resources', b.dataset.rejectRes, 'rejected', reason);
+  }));
+}
+
+async function renderPendingExperiences(){
+  const el = $('#admin-pending-exp');
+  el.innerHTML = '<p class="muted">Loading…</p>';
+  const { data, error } = await sb.from('experiences').select('*').eq('status','pending').order('created_at',{ascending:true});
+  if(error){ el.innerHTML = escapeHtml(error.message); return; }
+  if(data.length===0){ el.innerHTML = '<div class="empty">No pending experiences — all caught up.</div>'; return; }
+  el.innerHTML = data.map(x => {
+    const rounds = Array.isArray(x.rounds) ? x.rounds : [];
+    return `<div class="ecard" style="margin-bottom:14px;">
+      <div style="padding:16px 18px;">
+        <div class="meta-row" style="margin-bottom:6px;">
+          <span class="co" style="font-family:var(--serif); font-weight:600; font-size:16px;">${escapeHtml(x.company)}</span>
+          <span class="role muted">${escapeHtml(x.role)}</span>
+          <span class="diff ${escapeHtml(x.difficulty)}">${escapeHtml(x.difficulty)}</span>
+        </div>
+        ${rounds.map(r => `<div class="round-block"><h4>${escapeHtml(r.title||'Round')}</h4><p>${escapeHtml(r.questions||'')}</p></div>`).join('')}
+        ${x.tips ? `<div class="tip-box"><strong>Tips:</strong> ${escapeHtml(x.tips)}</div>` : ''}
+        <p class="contributor">${x.is_anonymous ? 'Anonymous' : escapeHtml(x.contributor_name||'')} · <span class="muted">${escapeHtml(x.submitter_email)}</span></p>
+        <div style="margin-top:10px;">
+          <button class="btn small" data-approve-exp="${x.id}">Approve</button>
+          <button class="btn small danger" data-reject-exp="${x.id}">Reject</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  $all('[data-approve-exp]', el).forEach(b => b.addEventListener('click', ()=> moderate('experiences', b.dataset.approveExp, 'published')));
+  $all('[data-reject-exp]', el).forEach(b => b.addEventListener('click', ()=>{
+    const reason = prompt('Reason for rejecting (shown to submitter):', 'Needs more detail on rounds — resubmit if possible.');
+    if(reason===null) return;
+    moderate('experiences', b.dataset.rejectExp, 'rejected', reason);
+  }));
+}
+
+async function renderAllContent(){
+  const el = $('#admin-all');
+  el.innerHTML = '<p class="muted">Loading…</p>';
+  const [{data: res, error: e1}, {data: exp, error: e2}] = await Promise.all([
+    sb.from('resources').select('*').order('created_at',{ascending:false}),
+    sb.from('experiences').select('*').order('created_at',{ascending:false})
+  ]);
+  if(e1||e2){ el.innerHTML = escapeHtml((e1||e2).message); return; }
+  const rows = [
+    ...res.map(r => ({type:'Resource', title:r.title, sub:r.subject+' · Sem '+r.semester, status:r.status, created:r.created_at, table:'resources', id:r.id})),
+    ...exp.map(x => ({type:'Experience', title:x.company+' — '+x.role, sub:x.difficulty, status:x.status, created:x.created_at, table:'experiences', id:x.id})),
+  ].sort((a,b)=> new Date(b.created) - new Date(a.created));
+  if(rows.length===0){ el.innerHTML = '<div class="empty">Nothing submitted yet.</div>'; return; }
+  el.innerHTML = `<table class="ledger"><thead><tr><th>Date</th><th>Type</th><th>Title</th><th>Detail</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(r => `<tr>
+      <td>${formatDate(r.created)}</td>
+      <td>${r.type}</td>
+      <td>${escapeHtml(r.title)}</td>
+      <td class="muted">${escapeHtml(r.sub)}</td>
+      <td><span class="chip ${r.status}">${r.status}</span></td>
+      <td><button class="btn small danger" data-del-any-table="${r.table}" data-del-any-id="${r.id}">Delete</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+  $all('[data-del-any-table]', el).forEach(b => b.addEventListener('click', async ()=>{
+    if(!confirm('Permanently delete this item?')) return;
+    await sb.from(b.dataset.delAnyTable).delete().eq('id', b.dataset.delAnyId);
+    toast('Deleted.');
+    refreshAdminStats(); renderAllContent();
+  }));
+}
+
+async function moderate(table, id, status, reason){
+  const patch = { status };
+  if(reason !== undefined) patch.reject_reason = reason;
+  const { error } = await sb.from(table).update(patch).eq('id', id);
+  if(error){ toast('Failed: ' + error.message, true); return; }
+  toast(status==='published' ? 'Approved and published.' : 'Rejected.');
+  refreshAdminStats();
+  renderAdminTab();
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+if(location.hash === '#admin') showView('admin');
+if(isConfigured) loadResources();
+</script>
+</body>
+</html>
