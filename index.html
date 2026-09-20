@@ -442,11 +442,20 @@
    CONFIG — fill these in with your own Supabase project's values.
    Project Settings → API → Project URL / anon public key.
    ================================================================ */
-const SUPABASE_URL = "sb_publishable_K0BBZS4qDdXEKurV6KyXVw_vPtmkjIQ";
+const SUPABASE_URL = "http://sb_publishable_K0BBZS4qDdXEKurV6KyXVw_vPtmkjIQ.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3a3FtdmRxaGJmeXpobG9ydmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MjUxOTEsImV4cCI6MjEwNTUwMTE5MX0.QtOAKtBCPvidGup12aSVpw05Xh65LKT_zj5BbpUVDkU";
 
-const isConfigured = !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
-const sb = isConfigured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let isConfigured = !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
+let configError = "";
+let sb = null;
+if(isConfigured){
+  try{
+    sb = window.supabase.createClient(SUPABASE_URL.trim(), SUPABASE_ANON_KEY.trim());
+  }catch(e){
+    isConfigured = false;
+    configError = e.message;
+  }
+}
 const BUCKET = "resources";
 const SUBJECT_SUGGESTIONS = ["Data Structures","Algorithms","Machine Learning","Deep Learning","DBMS","Operating Systems","Computer Networks","Maths III","Python Programming","Java Programming","NLP","Computer Vision"];
 
@@ -470,7 +479,9 @@ if(!isConfigured){
   warn.className = 'config-warning';
   warn.style.margin = '20px auto 0';
   warn.style.maxWidth = '1032px';
-  warn.textContent = "⚠ This site isn't connected to a database yet. Open index.html and set SUPABASE_URL / SUPABASE_ANON_KEY at the top of the <script> — see SETUP.md for step-by-step instructions.";
+  warn.textContent = configError
+    ? "⚠ Supabase couldn't connect: " + configError + " — double-check SUPABASE_URL and SUPABASE_ANON_KEY at the top of the <script> in index.html (see SETUP.md)."
+    : "⚠ This site isn't connected to a database yet. Open index.html and set SUPABASE_URL / SUPABASE_ANON_KEY at the top of the <script> — see SETUP.md for step-by-step instructions.";
   document.querySelector('main').prepend(warn);
 }
 
@@ -482,9 +493,12 @@ $('#res-filter-sem').innerHTML += [1,2,3,4,5,6,7,8].map(n=>`<option value="${n}"
 /* ================================================================
    NAVIGATION
    ================================================================ */
+const VALID_VIEWS = ['resources','experiences','mydata','admin'];
 function showView(name){
+  if(!VALID_VIEWS.includes(name)) name = 'resources';
   $all('.view').forEach(v => v.classList.toggle('active', v.id === 'view-'+name));
   $all('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === name ? 'true' : 'false'));
+  if(location.hash !== '#'+name) history.replaceState(null, '', '#'+name);
   if(name==='resources') loadResources();
   if(name==='experiences') loadExperiences();
   if(name==='admin') loadAdmin();
@@ -492,6 +506,13 @@ function showView(name){
 }
 $all('.tab').forEach(t => t.addEventListener('click', ()=> showView(t.dataset.view)));
 $('#admin-nav-link').addEventListener('click', e=>{ e.preventDefault(); showView('admin'); });
+
+/* Handle direct links / back-button / footer anchor, e.g. site.html#mydata */
+function handleHash(){
+  const name = location.hash.replace('#','');
+  if(VALID_VIEWS.includes(name)) showView(name);
+}
+window.addEventListener('hashchange', handleHash);
 
 /* ================================================================
    MODALS
@@ -883,8 +904,7 @@ async function moderate(table, id, status, reason){
 /* ================================================================
    INIT
    ================================================================ */
-if(location.hash === '#admin') showView('admin');
-if(isConfigured) loadResources();
+if(location.hash){ handleHash(); } else if(isConfigured){ loadResources(); }
 </script>
 </body>
 </html>
